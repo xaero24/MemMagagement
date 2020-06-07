@@ -12,20 +12,22 @@ typedef struct{
 } page;
 
 int numFromString(char*);
-void memInit(page*, int);
-int pagingWithLRU();
-int pagingWithSCFIFO();
+void memInit(page**, int);
+void readFromPage();
+void writeToPage();
+void printMem();
 
 int main(int argc, char* argv[])
 {
     char inFileName[64], outFileName[64], c;
-    int isLRU = 0, i;
+    int isLRU = 0, i, j;
     int mainMemSize, secMemSize;
     FILE *inFile, *outFile;
     page *mainMemory, *secMemory;
-    size_t len;
+    size_t len = 0;
     ssize_t read;
-    char *line;
+    char *line = NULL, param[32];
+    int pageNum;
 
     /*Checking the passed parameters*/
     if(argc < 6)
@@ -52,16 +54,14 @@ int main(int argc, char* argv[])
     printf("Program settings:\n");
     printf("Input File: %s\n", inFileName);
     printf("Output File: %s\n", outFileName);
-    printf("LRU choice: %d\n", isLRU);
+    if(isLRU) printf("Paging with LRU\n");
+    else printf("Paging with Second Chance FIFO\n");
     printf("Main memory size (RAM frames): %d\n", mainMemSize);
     printf("Secondary memory size (virtual memory pages): %d\n", secMemSize);
 
     /*initialization of main and seondary memory*/
-    //mainMemory = (page*)malloc(mainMemSize*sizeof(page));
-    //secMemory = (page*)malloc(secMemSize*sizeof(page));
-
-    memInit(mainMemory, mainMemSize);
-    memInit(secMemory, secMemSize);
+    memInit(&mainMemory, mainMemSize);
+    memInit(&secMemory, secMemSize);
 
     /*Get all data into secondary memory array*/
     inFile = fopen(inFileName, "r");
@@ -75,11 +75,43 @@ int main(int argc, char* argv[])
         switch(line[0])
         {
             case 'r':
-                printf("Read instruction\n");
+                for(i=0; line[i]!=' '; i++); //Skip all instruction letters
+                i++;
+                j=0;
+                while (line[i]>='0' && line[i]<='9') param[j++] = line[i++];
+                param[j] = '\0';
+                pageNum = numFromString(param);
+
+                if(isLRU)
+                {
+                    printf("Paging with LRU: ");
+                }
+                else
+                {
+                    printf("Paging with SC-FIFO: ");
+                }
+
+                printf("READ from page '%d'\n", pageNum);
                 break;
             case 'w':
+                for(i=0; line[i]!=' '; i++); //Skip all instruction letters
+                i++;
+                j=0;
+                while (line[i]!=' ') param[j++] = line[i++];
+                param[j] = '\0';
+                pageNum = numFromString(param);
+                c = line[i+1];
 
-                printf("Write instruction\n");
+                if(isLRU)
+                {
+                    printf("Paging with LRU: ");
+                }
+                else
+                {
+                    printf("Paging with SC-FIFO: ");
+                }
+
+                printf("WRITE char '%c' to page '%d'\n", c, pageNum);
                 break;
             case 'p':
                 printMem();
@@ -88,9 +120,6 @@ int main(int argc, char* argv[])
                 printf("Unknown instruction\n");
         }
     }
-    
-    /*Operate on one of the strategies*/
-    //isLRU==1 ? pagingWithLRU() : pagingWithSCFIFO();
 
     fclose(inFile);
     /*Releasing the memory*/
@@ -112,16 +141,16 @@ int numFromString(char* number)
     return value;
 }
 
-void memInit(page* memory, int size)
+void memInit(page** memory, int size)
 {
     int i;
-    memory = (page*)malloc(size*sizeof(page));
+    *memory = (page*)malloc(size*sizeof(page));
     for(i=0; i<size; i++)
     {
-        memory[i].pageNumber = -1;
-        strcpy(memory[i].contents, "\0");
-        memory[i].secondChance = 0;
-        memory[i].timer = 0;
+        (*memory)[i].pageNumber = -1;
+        strcpy((*memory)[i].contents, "\0");
+        (*memory)[i].secondChance = 0;
+        (*memory)[i].timer = 0;
     }
 }
 
@@ -138,7 +167,7 @@ void printMem()
     int i;
     printf("secondaryMemory = [");
     /*secMem printing goes here*/
-
-
+    printf(" SECONDARY MEMORY ");
+    /*End secMem printing*/
     printf("]\n");
 }
